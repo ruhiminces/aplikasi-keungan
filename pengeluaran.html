@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Pengeluaran Bulanan</title>
+    <style>
+        :root {
+            --primary: #10B981;
+            --bg: #F6F9FC;
+            --text: #333333;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            padding: 2rem;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        input, select, button {
+            padding: 0.8rem;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 1rem;
+        }
+        #btnSubmit {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        #btnSubmit:hover {
+            opacity: 0.9;
+        }
+        
+        /* Tombol Ekspor Excel */
+        .btn-excel {
+            background-color: #047857; /* Hijau gelap ala Excel */
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.3s;
+        }
+        .btn-excel:hover {
+            background-color: #065F46;
+        }
+        .btn-excel:disabled {
+            background-color: #CBD5E1;
+            cursor: not-allowed;
+        }
+
+        .total-box {
+            background: #eef2f6;
+            padding: 1rem;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        .ringkasan-kategori {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 1.5rem;
+        }
+        .kategori-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+        .kategori-card .nama-kat {
+            color: #64748b;
+            font-size: 0.8rem;
+            margin-bottom: 4px;
+        }
+        .kategori-card .jumlah-kat {
+            font-weight: bold;
+            color: var(--primary);
+            font-size: 1rem;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+            margin-top: 1rem;
+            border-top: 2px dashed #eee;
+            padding-top: 1rem;
+        }
+        li {
+            background: #fdfdfd;
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .info-kiri {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .baris-atas {
+            display: flex;
+            align-items: center;
+        }
+        .tanggal-teks {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+        .kategori-label {
+            background-color: #e2e8f0;
+            color: #475569;
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 8px;
+            font-weight: bold;
+        }
+        .aksi-tombol {
+            display: flex;
+            gap: 5px;
+        }
+        .btn-action {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.85rem;
+            color: white;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-edit { background-color: #3B82F6; }
+        .btn-edit:hover { background-color: #2563EB; }
+        .btn-delete { background-color: #EF4444; }
+        .btn-delete:hover { background-color: #DC2626; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Catat Pengeluaran</h2>
+        
+        <form id="formPengeluaran">
+            <input type="date" id="tanggal" required>
+            <input type="text" id="keterangan" placeholder="Contoh: Beli Bensin" required>
+            <select id="kategori" required>
+                <option value="" disabled selected>-- Pilih Kategori --</option>
+                <option value="Makan & Minum">Makan & Minum</option>
+                <option value="Transportasi">Transportasi</option>
+                <option value="Tagihan">Tagihan (Listrik/Internet)</option>
+                <option value="Hiburan">Hiburan</option>
+                <option value="Lainnya">Lainnya</option>
+            </select>
+            <input type="number" id="nominal" placeholder="Nominal (Rp)" required min="1">
+            <button type="submit" id="btnSubmit">Tambah Pengeluaran</button>
+        </form>
+
+        <div class="total-box">
+            Total Keseluruhan: <span id="totalRupiah">Rp 0</span>
+        </div>
+
+        <!-- PERUBAHAN HTML: Tombol Download Excel -->
+        <button type="button" id="btnExcel" class="btn-excel" onclick="downloadExcel()">
+            📥 Download ke Excel (CSV)
+        </button>
+
+        <div id="ringkasanKategori" class="ringkasan-kategori"></div>
+
+        <ul id="daftarPengeluaran"></ul>
+    </div>
+
+    <script>
+        const form = document.getElementById('formPengeluaran');
+        const inputTanggal = document.getElementById('tanggal');
+        const inputKeterangan = document.getElementById('keterangan');
+        const inputKategori = document.getElementById('kategori');
+        const inputNominal = document.getElementById('nominal');
+        const btnSubmit = document.getElementById('btnSubmit');
+        const btnExcel = document.getElementById('btnExcel');
+        const daftarPengeluaran = document.getElementById('daftarPengeluaran');
+        const totalRupiah = document.getElementById('totalRupiah');
+        const wadahRingkasan = document.getElementById('ringkasanKategori');
+
+        let dataPengeluaran = JSON.parse(localStorage.getItem('pengeluaran')) || [];
+        let modeEditIndex = -1;
+
+        const hariIni = new Date().toISOString().split('T')[0];
+        inputTanggal.value = hariIni;
+
+        function perbaruiTampilan() {
+            daftarPengeluaran.innerHTML = '';
+            wadahRingkasan.innerHTML = '';
+            
+            let total = 0;
+            let hitungKategori = {}; 
+
+            // Atur tombol excel aktif/mati tergantung apakah ada data atau tidak
+            if (dataPengeluaran.length === 0) {
+                btnExcel.disabled = true;
+            } else {
+                btnExcel.disabled = false;
+            }
+
+            dataPengeluaran.forEach((item, index) => {
+                total += item.nominal;
+                const namaKategori = item.kategori || 'Tanpa Kategori';
+
+                if (hitungKategori[namaKategori]) {
+                    hitungKategori[namaKategori] += item.nominal;
+                } else {
+                    hitungKategori[namaKategori] = item.nominal;
+                }
+
+                let teksTanggal = "-";
+                if (item.tanggal) {
+                    const objTanggal = new Date(item.tanggal);
+                    teksTanggal = objTanggal.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+                }
+
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div class="info-kiri">
+                        <div class="baris-atas">
+                            <span>${item.keterangan}</span>
+                            <span class="kategori-label">${namaKategori}</span>
+                        </div>
+                        <span class="tanggal-teks">📅 ${teksTanggal}</span>
+                    </div>
+                    <div class="aksi-tombol">
+                        <span style="margin-right: 15px; font-weight: bold; display: flex; align-items: center;">Rp ${item.nominal.toLocaleString('id-ID')}</span>
+                        <button class="btn-action btn-edit" onclick="editData(${index})">Edit</button>
+                        <button class="btn-action btn-delete" onclick="hapusData(${index})">Hapus</button>
+                    </div>
+                `;
+                daftarPengeluaran.appendChild(li);
+            });
+
+            for (let namaKat in hitungKategori) {
+                const card = document.createElement('div');
+                card.className = 'kategori-card';
+                card.innerHTML = `
+                    <span class="nama-kat">${namaKat}</span>
+                    <span class="jumlah-kat">Rp ${hitungKategori[namaKat].toLocaleString('id-ID')}</span>
+                `;
+                wadahRingkasan.appendChild(card);
+            }
+
+            totalRupiah.innerText = `Rp ${total.toLocaleString('id-ID')}`;
+            localStorage.setItem('pengeluaran', JSON.stringify(dataPengeluaran));
+        }
+
+        // FUNGSI BARU: Mengubah data menjadi file CSV untuk Excel
+        function downloadExcel() {
+            if (dataPengeluaran.length === 0) return;
+
+            // 1. Buat baris judul kolom (Header)
+            let csvContent = "Tanggal,Keterangan,Kategori,Nominal (Rp)\r\n";
+
+            // 2. Masukkan data satu per satu ke dalam baris CSV
+            dataPengeluaran.forEach(item => {
+                // Bungkus keterangan dengan tanda kutip untuk mencegah error jika ada koma di dalamnya
+                let keteranganBersih = `"${item.keterangan.replace(/"/g, '""')}"`;
+                let baris = `${item.tanggal},${keteranganBersih},${item.kategori},${item.nominal}\r\n`;
+                csvContent += baris;
+            });
+
+            // 3. Buat file virtual di browser
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            // 4. Buat elemen link tersembunyi untuk memicu download otomatis
+            const linkA = document.createElement('a');
+            linkA.setAttribute('href', url);
+            linkA.setAttribute('download', 'Laporan_Pengeluaran_Bulanan.csv');
+            document.body.appendChild(linkA);
+            
+            linkA.click(); // Klik otomatis
+            
+            document.body.removeChild(linkA); // Hapus kembali elemen setelah selesai
+        }
+
+        function editData(index) {
+            inputTanggal.value = dataPengeluaran[index].tanggal || hariIni;
+            inputKeterangan.value = dataPengeluaran[index].keterangan;
+            inputKategori.value = dataPengeluaran[index].kategori;
+            inputNominal.value = dataPengeluaran[index].nominal;
+            
+            modeEditIndex = index;
+            btnSubmit.innerText = "Simpan Perubahan";
+            btnSubmit.style.backgroundColor = "#F59E0B";
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            if (modeEditIndex === -1) {
+                dataPengeluaran.push({
+                    tanggal: inputTanggal.value,
+                    keterangan: inputKeterangan.value,
+                    nominal: parseInt(inputNominal.value),
+                    kategori: inputKategori.value
+                });
+            } else {
+                dataPengeluaran[modeEditIndex] = {
+                    tanggal: inputTanggal.value,
+                    keterangan: inputKeterangan.value,
+                    nominal: parseInt(inputNominal.value),
+                    kategori: inputKategori.value
+                };
+                
+                modeEditIndex = -1;
+                btnSubmit.innerText = "Tambah Pengeluaran";
+                btnSubmit.style.backgroundColor = "var(--primary)";
+            }
+
+            inputTanggal.value = hariIni;
+            inputKeterangan.value = '';
+            inputNominal.value = '';
+            inputKategori.value = '';
+
+            perbaruiTampilan();
+        });
+
+        function hapusData(index) {
+            if (modeEditIndex === index) {
+                modeEditIndex = -1;
+                inputTanggal.value = hariIni;
+                inputKeterangan.value = '';
+                inputNominal.value = '';
+                inputKategori.value = '';
+                btnSubmit.innerText = "Tambah Pengeluaran";
+                btnSubmit.style.backgroundColor = "var(--primary)";
+            }
+            
+            dataPengeluaran.splice(index, 1);
+            perbaruiTampilan();
+        }
+
+        perbaruiTampilan();
+    </script>
+
+</body>
+</html>
